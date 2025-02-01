@@ -46,6 +46,7 @@ namespace lbcrypto {
 
 class CryptoParametersCKKSRNS : public CryptoParametersRNS {
     using ParmType = typename DCRTPoly::Params;
+    #define DISABLED_FOR_CKKSRNS_PARAMS OPENFHE_THROW("This parameter is not available for CKKSRNS.");
 
 public:
     CryptoParametersCKKSRNS() : CryptoParametersRNS() {}
@@ -90,6 +91,11 @@ public:
                              uint32_t extraBits) override;
 
     uint64_t FindAuxPrimeStep() const override;
+
+    //PlaintextModulus GetPlaintextModulus() const override {
+        //DISABLED_FOR_CKKSRNS_PARAMS;
+    //}
+
 
     /////////////////////////////////////
     // SERIALIZATION
