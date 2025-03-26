@@ -2,6 +2,7 @@
 #include <iostream>
 #include <iomanip>
 #include <mach/mach.h>
+#include <chrono>  // For timing measurements
 
 // For trapdoor operations
 #include "lattice/trapdoor.h"
@@ -41,8 +42,9 @@ int main() {
     auto zero_alloc    = DCRTPoly::Allocator(params, Format::EVALUATION);
     auto uniform_alloc = DCRTPoly::MakeDiscreteUniformAllocator(params, Format::EVALUATION);
     
-    // Record memory before TrapdoorGenSquareMat
+    // Record memory and time before TrapdoorGenSquareMat
     size_t memBefore = getMemoryUsageBytes();
+    auto startTime = std::chrono::high_resolution_clock::now();
     
     std::cout << "Memory before TrapdoorGenSquareMat: " 
               << memBefore << " bytes" << std::endl;
@@ -51,16 +53,20 @@ int main() {
     std::pair<Matrix<DCRTPoly>, RLWETrapdoorPair<DCRTPoly>> trapPair =
         RLWETrapdoorUtility<DCRTPoly>::TrapdoorGenSquareMat(params, sigma, d);
     
-    // Record memory after TrapdoorGenSquareMat
+    // Record memory and time after TrapdoorGenSquareMat
+    auto endTime = std::chrono::high_resolution_clock::now();
     size_t memAfter = getMemoryUsageBytes();
     
-    // Calculate memory usage
+    // Calculate memory usage and time
     size_t memUsed = memAfter - memBefore;
+    auto duration = std::chrono::duration_cast<std::chrono::duration<double>>(endTime - startTime);
     
     std::cout << "Memory after TrapdoorGenSquareMat: " 
               << memAfter << " bytes" << std::endl;
     std::cout << "Memory difference for TrapdoorGenSquareMat: " 
               << memUsed << " bytes" << std::endl;
+    std::cout << "Time for TrapdoorGenSquareMat: " 
+              << duration.count() << " seconds" << std::endl;
     
     // Now measure memory for GaussSampSquareMat
     std::cout << std::string(80, '-') << std::endl;
@@ -75,8 +81,9 @@ int main() {
     
     Matrix<DCRTPoly> U(zero_alloc, d, d, uniform_alloc);
     
-    // Record memory before GaussSampSquareMat
+    // Record memory and time before GaussSampSquareMat
     size_t memBeforeGauss = getMemoryUsageBytes();
+    auto startTimeGauss = std::chrono::high_resolution_clock::now();
     
     std::cout << "Memory before GaussSampSquareMat: " 
               << memBeforeGauss << " bytes" << std::endl;
@@ -85,20 +92,25 @@ int main() {
     Matrix<DCRTPoly> z = RLWETrapdoorUtility<DCRTPoly>::GaussSampSquareMat(n, k, trapPair.first,
                                                                            trapPair.second, U, dgg, dggLargeSigma);
     
-    // Record memory after GaussSampSquareMat
+    // Record memory and time after GaussSampSquareMat
+    auto endTimeGauss = std::chrono::high_resolution_clock::now();
     size_t memAfterGauss = getMemoryUsageBytes();
     
-    // Calculate memory usage
+    // Calculate memory usage and time
     size_t memUsedGauss = memAfterGauss - memBeforeGauss;
+    auto durationGauss = std::chrono::duration_cast<std::chrono::duration<double>>(endTimeGauss - startTimeGauss);
     
     std::cout << "Memory after GaussSampSquareMat: " 
               << memAfterGauss << " bytes" << std::endl;
     std::cout << "Memory difference for GaussSampSquareMat: " 
               << memUsedGauss << " bytes" << std::endl;
+    std::cout << "Time for GaussSampSquareMat: " 
+              << durationGauss.count() << " seconds" << std::endl;
     
     std::cout << std::string(80, '-') << std::endl;
     std::cout << "Note: Memory is measured using the Mach API (resident_size) on macOS in bytes." << std::endl;
     std::cout << "      Negative values may indicate memory was freed during the operation." << std::endl;
+    std::cout << "      Time is measured in seconds using std::chrono::high_resolution_clock." << std::endl;
     
     return 0;
 }
