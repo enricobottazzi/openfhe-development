@@ -37,6 +37,7 @@
 #include "math/nbtheory.h"
 #include "utils/inttypes.h"
 #include "utils/utilities.h"
+#include "utils/serial.h"
 #include "lattice/trapdoor.h"
 
 using namespace lbcrypto;
@@ -163,7 +164,6 @@ TEST(UTTrapdoor, TrapDoorPairTestSquareMat) {
 
     // Matrix<Poly> g = Matrix<Poly>(zero_alloc, 1, k).GadgetVector();
 }
-
 TEST(UTTrapdoor, GadgetTest) {
     usint m = 16;
     BigInteger modulus("67108913");
@@ -478,12 +478,64 @@ TEST(UTTrapdoor, TrapDoorGaussSampTest) {
 
     Poly u(dug, params, Format::COEFFICIENT);
 
+    // Create field elements from ring elements
+    Field2n a(u);
+
+    // print the field element
+    std::cout << "Field element a: " << a << std::endl;
+
     OPENFHE_DEBUG("u " << u);
     u.SwitchFormat();
     OPENFHE_DEBUG("u " << u);
 
+    // serialize poly u to binary
+    std::string filename = "u.bin";
+    bool serializeSuccess = lbcrypto::Serial::SerializeToFile(filename, u, SerType::BINARY);
+    EXPECT_TRUE(serializeSuccess) << "Failed to serialize u to file";
+
+    // deserialize u from binary
+    Poly deserializedU;
+    bool deserializeSuccess = lbcrypto::Serial::DeserializeFromFile(filename, deserializedU, SerType::BINARY);
+    EXPECT_TRUE(deserializeSuccess) << "Failed to deserialize u from file";
+
+    // serialize trapPair.first to file
+    // std::string filenameTrapPairFirst = "trapPairFirst.bin";
+    // bool serializeSuccessTrapPairFirst = lbcrypto::Serial::SerializeToFile(filenameTrapPairFirst, trapPair.first, SerType::BINARY);
+    // EXPECT_TRUE(serializeSuccessTrapPairFirst) << "Failed to serialize trapPair.first to file";
+
+    // // deserialize trapPair.first from file
+    // Matrix<Poly> deserializedTrapPairFirst;
+    // bool deserializeSuccessTrapPairFirst = lbcrypto::Serial::DeserializeFromFile(filenameTrapPairFirst, deserializedTrapPairFirst, SerType::BINARY);
+    // EXPECT_TRUE(deserializeSuccessTrapPairFirst) << "Failed to deserialize trapPair.first from file";
+
+    // // serialize trapPair.second to file
+    // std::string filenameTrapPairSecond = "trapPairSecond.bin";
+    // bool serializeSuccessTrapPairSecond = lbcrypto::Serial::SerializeToFile(filenameTrapPairSecond, trapPair.second, SerType::BINARY);
+    // EXPECT_TRUE(serializeSuccessTrapPairSecond) << "Failed to serialize trapPair.second to file";
+
+    // // deserialize trapPair.second from file
+    // RLWETrapdoorPair<Poly> deserializedTrapPairSecond;
+    // bool deserializeSuccessTrapPairSecond = lbcrypto::Serial::DeserializeFromFile(filenameTrapPairSecond, deserializedTrapPairSecond, SerType::BINARY);
+    // EXPECT_TRUE(deserializeSuccessTrapPairSecond) << "Failed to deserialize trapPair.second from file";
+
+    // save trapPair.first to file
+    std::string filenameTrapPairFirst = "trapPairFirst.bin";
+    bool serializeSuccessTrapPairFirst = lbcrypto::Serial::SerializeToFile(filenameTrapPairFirst, trapPair.first, SerType::BINARY);
+    EXPECT_TRUE(serializeSuccessTrapPairFirst) << "Failed to serialize trapPair.first to file";
+
+    // Deserialize trapPair.first from file
+    Matrix<Poly> deserializedTrapPairFirst;
+    bool deserializeSuccessTrapPairFirst = lbcrypto::Serial::DeserializeFromFile(filenameTrapPairFirst, deserializedTrapPairFirst, SerType::BINARY);
+    EXPECT_TRUE(deserializeSuccessTrapPairFirst) << "Failed to deserialize trapPair.first from file";
+    
+    // Set the allocator for the deserialized matrix
+    auto zero_alloc = Poly::Allocator(params, Format::EVALUATION);
+    deserializedTrapPairFirst.SetAllocator(zero_alloc);
+
+
+
     Matrix<Poly> z =
-        RLWETrapdoorUtility<Poly>::GaussSamp(m / 2, k, trapPair.first, trapPair.second, u, dgg, dggLargeSigma);
+        RLWETrapdoorUtility<Poly>::GaussSamp(m / 2, k, deserializedTrapPairFirst, trapPair.second, deserializedU, dgg, dggLargeSigma);
 
     // Matrix<Poly> uEst = trapPair.first * z;
 
@@ -534,6 +586,22 @@ TEST(UTTrapdoor, TrapDoorGaussSampTestSquareMatrices) {
         Matrix<Poly> R = trapPair.second.m_r;
         Matrix<Poly> E = trapPair.second.m_e;
 
+
+        // // Serialize trapPair.second to file
+        // std::string filename = "trapPairSecond_d" + std::to_string(d) + ".bin";
+        // bool serializeSuccess = lbcrypto::Serial::SerializeToFile(filename, trapPair.second, SerType::JSON);
+        // EXPECT_TRUE(serializeSuccess) << "Failed to serialize trapPair.second to file for d=" << d;
+
+        // // Deserialize from file
+        // RLWETrapdoorPair<Poly> deserializedTrapPairSecond;
+        // bool deserializeSuccess = lbcrypto::Serial::DeserializeFromFile(filename, deserializedTrapPairSecond, SerType::JSON);
+        // EXPECT_TRUE(deserializeSuccess) << "Failed to deserialize trapPair.second from file for d=" << d;
+
+        // // assert that the deserialized trapPair.second is the same as the original
+        // EXPECT_EQ(trapPair.second.m_r, deserializedTrapPairSecond.m_r) << "Failure testing deserialized m_r for d=" << d;
+        // EXPECT_EQ(trapPair.second.m_e, deserializedTrapPairSecond.m_e) << "Failure testing deserialized m_e for d=" << d;
+
+        // Test with the deserialized trapdoor pair
         Poly::DggType dgg(sigma);
 
         uint32_t base = 2;
@@ -543,9 +611,19 @@ TEST(UTTrapdoor, TrapDoorGaussSampTestSquareMatrices) {
 
         Matrix<Poly> U(zero_alloc, d, d, uniform_alloc);
 
+    
+        // std::string filenameU = "U_d" + std::to_string(d) + ".bin";
+        // bool serializeSuccessU = lbcrypto::Serial::Serialize(filenameU, U, SerType::BINARY);
+        // EXPECT_TRUE(serializeSuccessU) << "Failed to serialize U to file for d=" << d;
+
+        // // deserialize U from file
+        // Matrix<Poly> deserializedU;
+        // bool deserializeSuccessU = lbcrypto::Serial::DeserializeFromFile(filenameU, deserializedU, SerType::JSON);
+        // EXPECT_TRUE(deserializeSuccessU) << "Failed to deserialize U from file for d=" << d;
+
         Matrix<Poly> z = RLWETrapdoorUtility<Poly>::GaussSampSquareMat(m / 2, k, trapPair.first, trapPair.second, U,
                                                                        dgg, dggLargeSigma);
-
+                                                        
         EXPECT_EQ(trapPair.first.GetCols(), z.GetRows()) << "Failure testing number of rows";
         EXPECT_EQ(m / 2, z(0, 0).GetLength()) << "Failure testing ring dimension for the first ring element";
 
@@ -554,7 +632,7 @@ TEST(UTTrapdoor, TrapDoorGaussSampTestSquareMatrices) {
         UEst.SwitchFormat();
         U.SwitchFormat();
 
-        EXPECT_EQ(U, UEst) << "Failure trapdoor sampling test for " << d << "x" << d << " matrices";
+        EXPECT_EQ(U, UEst) << "Failure trapdoor sampling test for " << d << "x" << d << " matrices with deserialized trapdoor";
     }
 }
 
@@ -565,7 +643,7 @@ TEST(UTTrapdoor, TrapDoorGaussSampTestSquareMatrices) {
 TEST(UTTrapdoor, TrapDoorGaussSampTestSquareMatricesDCRT) {
     usint m         = 16;
     usint n         = m / 2;
-    size_t dcrtBits = 57;
+    size_t dcrtBits = 51;
     size_t size     = 3;
     double sigma    = SIGMA;
 
@@ -585,7 +663,13 @@ TEST(UTTrapdoor, TrapDoorGaussSampTestSquareMatricesDCRT) {
         Matrix<DCRTPoly> R = trapPair.second.m_r;
         Matrix<DCRTPoly> E = trapPair.second.m_e;
 
+        // // fetch a polynomial from matrix
+        // const DCRTPoly& r = R(0, 0);
+
         DCRTPoly::DggType dgg(sigma);
+
+        int64_t sample = dgg.GenerateIntegerKarney(0, 4);
+        std::cout << "Sample from Karney's method: " << sample << std::endl;
 
         uint32_t base = 2;
         double c      = (base + 1) * SIGMA;
@@ -594,8 +678,25 @@ TEST(UTTrapdoor, TrapDoorGaussSampTestSquareMatricesDCRT) {
 
         Matrix<DCRTPoly> U(zero_alloc, d, d, uniform_alloc);
 
+        // print k
+        std::cout << "k = " << k << std::endl;
+
+        // print g
+        Matrix<DCRTPoly> g = Matrix<DCRTPoly>(zero_alloc, 1, k).GadgetVector(base);
+
+        // std::cout << "g = " << g << std::endl;
+
+        // Print the gadget vector in a more ordinate way, one polynomial at a time
+        std::cout << "\nGadget Vector (g) - Each Vector Polynomial:" << std::endl;
+        for (size_t col = 0; col < g.GetCols(); ++col) {
+            std::cout << "Polynomial [0][" << col << "]:" << std::endl;
+            std::cout << g(0, col) << std::endl;
+            std::cout << "----------------------------------------" << std::endl;
+        }
+
         Matrix<DCRTPoly> z = RLWETrapdoorUtility<DCRTPoly>::GaussSampSquareMat(m / 2, k, trapPair.first,
                                                                                trapPair.second, U, dgg, dggLargeSigma);
+                                                                        
 
         EXPECT_EQ(trapPair.first.GetCols(), z.GetRows()) << "Failure testing number of rows";
         EXPECT_EQ(m / 2, z(0, 0).GetLength()) << "Failure testing ring dimension for the first ring element";
@@ -751,4 +852,81 @@ TEST(UTTrapdoor, TrapDoorPerturbationSamplingTest) {
     // 0)) / count << std::endl; std::cout << (double(pCovarianceMatrix(2, 0)) -
     // meanMatrix(2, 0)) / count << std::endl; std::cout <<
     // (double(pCovarianceMatrix(3, 0)) - meanMatrix(3, 0)) / count << std::endl;
+}
+
+// Test for decomposing a DCRTPoly into a gadget basis and verifying reconstruction
+// Equivalent to the Rust test: test_decompose_dcrt_gadget
+TEST(UTTrapdoor, DecomposeDCRTGadgetTest) {
+    // Set up parameters
+    usint n = 8;  // Ring dimension
+    size_t size = 4;  // Number of towers
+    size_t dcrtBits = 51;  // Bit size for each tower
+    double sigma = SIGMA;  // Standard deviation for Gaussian sampling
+
+    // Create DCRTPoly parameters
+    auto params = std::make_shared<ILDCRTParams<BigInteger>>(2 * n, size, dcrtBits);
+    
+    // Calculate base and k (number of digits)
+    int64_t base = 2;
+    NativeInteger q = params->GetParams()[0]->GetModulus();
+    size_t digitCount = static_cast<size_t>(ceil(log2(q.ConvertToDouble()) / log2(base)));
+    size_t k = params->GetParams().size() * digitCount;
+    
+    // Create allocators and samplers
+    auto zero_alloc = DCRTPoly::Allocator(params, Format::EVALUATION);
+    auto uniform_alloc = DCRTPoly::MakeDiscreteUniformAllocator(params, Format::EVALUATION);
+    DCRTPoly::DggType dgg(sigma);
+    
+    // Sample a uniform target
+    Matrix<DCRTPoly> target(zero_alloc, 1, 1, uniform_alloc);
+    
+    // Switch to coefficient representation for decomposition
+    target.SetFormat(Format::COEFFICIENT);
+    
+    // Decompose the target using GaussSampGqArbBase
+    Matrix<int64_t> zHatBBI([]() { return 0; }, k, n);
+    
+    // Decompose each tower of the target
+    for (size_t u = 0; u < size; u++) {
+        uint32_t kRes = k / size;
+        NativeInteger qu = params->GetParams()[u]->GetModulus();
+        Matrix<int64_t> digits([]() { return 0; }, kRes, n);
+        
+        // Use GaussSampGqArbBase to decompose the target
+        LatticeGaussSampUtility<NativePoly>::GaussSampGqArbBase(
+            target.GetElementAtIndex(u),
+            3.0 * SIGMA,
+            kRes,
+            qu,
+            base,
+            dgg,
+            &digits
+        );
+        
+        // Copy the decomposed digits to the result matrix
+        for (size_t p = 0; p < kRes; p++) {
+            for (size_t j = 0; j < n; j++) {
+                zHatBBI(p + u * kRes, j) = digits(p, j);
+            }
+        }
+    }
+    
+    // Convert zHat from a matrix of integers to a vector of DCRTPoly elements
+    Matrix<DCRTPoly> decomposed = SplitInt64AltIntoElements<DCRTPoly>(zHatBBI, n, params);
+    
+    // Switch to evaluation representation for multiplication
+    decomposed.SetFormat(Format::EVALUATION);
+    
+    // Generate the gadget vector
+    Matrix<DCRTPoly> gadgetVector = Matrix<DCRTPoly>(zero_alloc, 1, k).GadgetVector(base);
+    
+    // Multiply the gadget vector by the decomposed vector to reconstruct the target
+    DCRTPoly reconstructed = (gadgetVector * decomposed)(0, 0);
+    
+    // Switch both to the same format for comparison
+    target.SetFormat(Format::EVALUATION);
+    reconstructed.SetFormat(Format::EVALUATION);
+    
+    // Verify that gadget_vec * decomposed = target
+    EXPECT_EQ(target, reconstructed) << "Failure: gadget_vec * decomposed != target";
 }
