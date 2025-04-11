@@ -563,31 +563,33 @@ TEST(UTTrapdoor, TrapDoorGaussSampTestSquareMatrices) {
 #if !defined(__EMSCRIPTEN__) && !defined(__CYGWIN__)
 // Test of Gaussian Sampling for matrices from 2x2 to 5x5
 TEST(UTTrapdoor, TrapDoorGaussSampTestSquareMatricesDCRT) {
-    usint m         = 16;
+    usint m         = 8;
     usint n         = m / 2;
-    size_t dcrtBits = 57;
-    size_t size     = 3;
+    size_t dcrtBits = 17;
+    size_t size     = 2;
     double sigma    = SIGMA;
+
 
     auto params = std::make_shared<ILDCRTParams<BigInteger>>(2 * n, size, dcrtBits);
 
+    uint32_t base = 1024;
     double val    = params->GetModulus().ConvertToDouble();
-    double logTwo = std::ceil(log2(val));
-    usint k       = (usint)(logTwo);
-
+    usint nBits = floor(log2(val - 1.0) + 1.0);
+    usint k     = ceil(nBits / log2(base));
+    
     auto zero_alloc    = DCRTPoly::Allocator(params, Format::EVALUATION);
     auto uniform_alloc = DCRTPoly::MakeDiscreteUniformAllocator(params, Format::EVALUATION);
 
     for (size_t d = 2; d < 6; d++) {
+        
         std::pair<Matrix<DCRTPoly>, RLWETrapdoorPair<DCRTPoly>> trapPair =
-            RLWETrapdoorUtility<DCRTPoly>::TrapdoorGenSquareMat(params, sigma, d);
+            RLWETrapdoorUtility<DCRTPoly>::TrapdoorGenSquareMat(params, sigma, d, base);
 
         Matrix<DCRTPoly> R = trapPair.second.m_r;
         Matrix<DCRTPoly> E = trapPair.second.m_e;
 
         DCRTPoly::DggType dgg(sigma);
 
-        uint32_t base = 2;
         double c      = (base + 1) * SIGMA;
         double s      = SPECTRAL_BOUND_D(n, k, base, d);
         DCRTPoly::DggType dggLargeSigma(sqrt(s * s - c * c));
@@ -595,7 +597,7 @@ TEST(UTTrapdoor, TrapDoorGaussSampTestSquareMatricesDCRT) {
         Matrix<DCRTPoly> U(zero_alloc, d, d, uniform_alloc);
 
         Matrix<DCRTPoly> z = RLWETrapdoorUtility<DCRTPoly>::GaussSampSquareMat(m / 2, k, trapPair.first,
-                                                                               trapPair.second, U, dgg, dggLargeSigma);
+                                                                               trapPair.second, U, dgg, dggLargeSigma, base);
 
         EXPECT_EQ(trapPair.first.GetCols(), z.GetRows()) << "Failure testing number of rows";
         EXPECT_EQ(m / 2, z(0, 0).GetLength()) << "Failure testing ring dimension for the first ring element";
