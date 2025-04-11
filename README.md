@@ -144,3 +144,11 @@ or, alternatively (original WAHC@CCS'22 version),
 ## Acknowledgments ##
 
 Distribution Statement "A" (Approved for Public Release, Distribution Unlimited). This work is supported in part by DARPA through HR0011-21-9-0003 and HR0011-20-9-0102. The views, opinions, and/or findings expressed are those of the author(s) and should not be interpreted as representing the official views or policies of the Department of Defense or the U.S. Government.
+
+
+Benches
+
+```
+cmake --build build --target dcrtpoly-vs-bigint -j4    
+./build/bin/benchmark/dcrtpoly-vs-bigint --benchmark_counters_tabular=true    
+```                                                                                                                                                                      
